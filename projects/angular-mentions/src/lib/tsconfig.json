@@ -4,8 +4,8 @@
     "declaration": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
-    "target": "es5",
-    "lib": ["es2016", "dom"],
+    "target": "es6",
+    "lib": ["es2020", "dom"],
     "module": "commonjs",
     "outDir": "../../mention",
     "typeRoots": [

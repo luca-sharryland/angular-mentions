@@ -1,6 +1,8 @@
 // DOM element manipulation functions...
 //
 
+import { InjectionToken, TemplateRef } from '@angular/core';
+
 function setValue(el: HTMLInputElement, value: any) {
   //console.log("setValue", el.nodeName, "["+value+"]");
   if (isInputOrTextAreaElement(el)) {
@@ -176,3 +178,10 @@ function localToRelativeCoordinates(
     }
   }
 }
+
+export const MENTIONS_DATA = new InjectionToken<{
+  labelKey: string;
+  itemTemplate: TemplateRef<any>;
+  styleOff: boolean;
+  activeIndex: number;
+}>('MENTIONS_DATA');

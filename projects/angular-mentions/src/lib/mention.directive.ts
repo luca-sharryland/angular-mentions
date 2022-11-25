@@ -1,9 +1,12 @@
-import { ComponentFactoryResolver, Directive, ElementRef, TemplateRef, ViewContainerRef } from "@angular/core";
-import { EventEmitter, Input, OnChanges, Output, SimpleChanges } from "@angular/core";
-import { getCaretPosition, getValue, insertValue, setCaretPosition } from './mention-utils';
+import { OriginConnectionPosition, Overlay, OverlayConnectionPosition, OverlayRef } from "@angular/cdk/overlay";
+import { Directive, ElementRef, EventEmitter, HostListener, Injector, Input, OnChanges, OnDestroy, Output, SimpleChanges, TemplateRef } from "@angular/core";
+import { getCaretPosition, getValue, insertValue, setCaretPosition, MENTIONS_DATA } from './mention-utils';
 
+import { ComponentPortal } from '@angular/cdk/portal';
+import { MentionService } from './mention.service';
 import { MentionConfig } from "./mention-config";
 import { MentionListComponent } from './mention-list.component';
+import { Subscription } from 'rxjs';
 
 const KEY_BACKSPACE = 8;
 const KEY_TAB = 9;
@@ -32,10 +35,11 @@ const KEY_BUFFERED = 229;
     'autocomplete': 'off'
   }
 })
-export class MentionDirective implements OnChanges {
+export class MentionDirective implements OnChanges, OnDestroy {
 
   // stores the items passed to the mentions directive and used to populate the root items in mentionConfig
   private mentionItems: any[];
+  private subscription: Subscription = new Subscription();
 
   @Input('mention') set mention(items: any[]) {
     this.mentionItems = items;
@@ -80,19 +84,26 @@ export class MentionDirective implements OnChanges {
   private searchString: string;
   private startPos: number;
   private startNode;
-  private searchList: MentionListComponent;
   private searching: boolean;
-  private iframe: any; // optional
+  private iframe: HTMLIFrameElement; // optional
   private lastKeyCode: number;
+
+  // for cdk overlay
+  private overlayRef: OverlayRef;
 
   constructor(
     private _element: ElementRef,
-    private _componentResolver: ComponentFactoryResolver,
-    private _viewContainerRef: ViewContainerRef
+    private overlay: Overlay,
+    private _injector: Injector,
+    private mentionService: MentionService
   ) { }
 
+  @HostListener('window:resize')
+  public onResize(): void {
+    this.overlayRef?.updatePosition();
+  }
+
   ngOnChanges(changes: SimpleChanges) {
-    // console.log('config change', changes);
     if (changes['mention'] || changes['mentionConfig']) {
       this.updateConfig();
     }
@@ -176,7 +187,6 @@ export class MentionDirective implements OnChanges {
   // @param nativeElement is the alternative text element in an iframe scenario
   keyHandler(event: any, nativeElement: HTMLInputElement = this._element.nativeElement) {
     this.lastKeyCode = event.keyCode;
-
     if (event.isComposing || event.keyCode === KEY_BUFFERED) {
       return;
     }
@@ -203,7 +213,6 @@ export class MentionDirective implements OnChanges {
       pos = this.startNode.length;
       setCaretPosition(this.startNode, pos, this.iframe);
     }
-    //console.log("keyHandler", this.startPos, pos, val, charPressed, event);
 
     let config = this.triggerChars[charPressed];
     if (config) {
@@ -212,6 +221,7 @@ export class MentionDirective implements OnChanges {
       this.startNode = (this.iframe ? this.iframe.contentWindow.getSelection() : window.getSelection()).anchorNode;
       this.searching = true;
       this.searchString = null;
+      this.overlayRef?.dispose();
       this.showSearchList(nativeElement);
       this.updateSearchList();
 
@@ -221,7 +231,7 @@ export class MentionDirective implements OnChanges {
     }
     else if (this.startPos >= 0 && this.searching) {
       if (pos <= this.startPos) {
-        this.searchList.hidden = true;
+        this.overlayRef?.dispose();
       }
       // ignore shift when pressed alone, but not when used with another key
       else if (event.keyCode !== KEY_SHIFT &&
@@ -239,19 +249,19 @@ export class MentionDirective implements OnChanges {
             this.stopSearch();
           }
         }
-        else if (this.searchList.hidden) {
+        else if (!this.overlayRef) {
           if (event.keyCode === KEY_TAB || event.keyCode === KEY_ENTER) {
             this.stopSearch();
             return;
           }
         }
-        else if (!this.searchList.hidden) {
+        else if (!!this.overlayRef) {
           if (event.keyCode === KEY_TAB || event.keyCode === KEY_ENTER) {
             this.stopEvent(event);
             // emit the selected list item
-            this.itemSelected.emit(this.searchList.activeItem);
+            this.itemSelected.emit(this.mentionService.activeItem);
             // optional function to format the selected item before inserting the text
-            const text = this.activeConfig.mentionSelect(this.searchList.activeItem, this.activeConfig.triggerChar);
+            const text = this.activeConfig.mentionSelect(this.mentionService.activeItem, this.activeConfig.triggerChar);
             // value is inserted without a trailing space for consistency
             // between element types (div and iframe do not preserve the space)
             insertValue(nativeElement, this.startPos, pos, text, this.iframe);
@@ -280,17 +290,17 @@ export class MentionDirective implements OnChanges {
           }
           else if (event.keyCode === KEY_DOWN) {
             this.stopEvent(event);
-            this.searchList.activateNextItem();
+            this.mentionService.activateItem('next');
             return false;
           }
           else if (event.keyCode === KEY_UP) {
             this.stopEvent(event);
-            this.searchList.activatePreviousItem();
+            this.mentionService.activateItem('previous');
             return false;
           }
         }
 
-        if (charPressed.length!=1 && event.keyCode!=KEY_BACKSPACE) {
+        if (charPressed.length != 1 && event.keyCode != KEY_BACKSPACE) {
           this.stopEvent(event);
           return false;
         }
@@ -303,7 +313,7 @@ export class MentionDirective implements OnChanges {
           if (this.activeConfig.returnTrigger) {
             const triggerChar = (this.searchString || event.keyCode === KEY_BACKSPACE) ? val.substring(this.startPos, this.startPos + 1) : '';
             this.searchTerm.emit(triggerChar + this.searchString);
-          } 
+          }
           else {
             this.searchTerm.emit(this.searchString);
           }
@@ -322,8 +332,8 @@ export class MentionDirective implements OnChanges {
   }
 
   stopSearch() {
-    if (this.searchList && !this.searchList.hidden) {
-      this.searchList.hidden = true;
+    if (!!this.overlayRef) {
+      this.overlayRef?.dispose();
       this.closed.emit();
     }
     this.activeConfig = null;
@@ -346,31 +356,75 @@ export class MentionDirective implements OnChanges {
       }
     }
     // update the search list
-    if (this.searchList) {
-      this.searchList.items = matches;
-      this.searchList.hidden = matches.length == 0;
+    if (!!this.overlayRef) {
+      this.mentionService.items = matches;
+      if (matches.length == 0) {
+        this.overlayRef?.dispose();
+      }
     }
   }
 
   showSearchList(nativeElement: HTMLInputElement) {
     this.opened.emit();
-
-    if (this.searchList == null) {
-      let componentFactory = this._componentResolver.resolveComponentFactory(MentionListComponent);
-      let componentRef = this._viewContainerRef.createComponent(componentFactory);
-      this.searchList = componentRef.instance;
-      this.searchList.itemTemplate = this.mentionListTemplate;
-      componentRef.instance['itemClick'].subscribe(() => {
+    this.subscription.unsubscribe();
+    let origin = {
+      topLeft: { originX: 'start', originY: 'top' } as OriginConnectionPosition,
+      topRight: { originX: 'end', originY: 'top' } as OriginConnectionPosition,
+      bottomLeft: { originX: 'start', originY: 'bottom' } as OriginConnectionPosition,
+      bottomRight: { originX: 'end', originY: 'bottom' } as OriginConnectionPosition,
+      topCenter: { originX: 'center', originY: 'top' } as OriginConnectionPosition,
+      bottomCenter: { originX: 'center', originY: 'bottom' } as OriginConnectionPosition
+    }
+    let overlay = {
+      topLeft: { overlayX: 'start', overlayY: 'top' } as OverlayConnectionPosition,
+      topRight: { overlayX: 'end', overlayY: 'top' } as OverlayConnectionPosition,
+      bottomLeft: { overlayX: 'start', overlayY: 'bottom' } as OverlayConnectionPosition,
+      bottomRight: { overlayX: 'end', overlayY: 'bottom' } as OverlayConnectionPosition,
+      topCenter: { overlayX: 'center', overlayY: 'top' } as OverlayConnectionPosition,
+      bottomCenter: { overlayX: 'center', overlayY: 'bottom' } as OverlayConnectionPosition
+    }
+    const element = this.iframe ? this.iframe : nativeElement;
+    const positionStrategy = this.overlay.position()
+      .flexibleConnectedTo(element)
+      .withPush(false)
+      .withViewportMargin(16)
+      .withPositions([{ ...origin.bottomLeft, ...overlay.topLeft }, { ...origin.topLeft, ...overlay.bottomLeft }]);
+    this.overlayRef = this.overlay.create({
+      hasBackdrop: false,
+      disposeOnNavigation: true,
+      panelClass: 'autocomplete',
+      positionStrategy,
+      scrollStrategy: this.overlay.scrollStrategies.reposition({ autoClose: true, scrollThrottle: 1 }),
+    });
+    const filePreviewPortal = new ComponentPortal(
+      MentionListComponent,
+      null,
+      Injector.create({
+        parent: this._injector,
+        providers: [
+          {
+            provide: MENTIONS_DATA,
+            useValue: {
+              itemTemplate: this.mentionListTemplate,
+              labelKey: this.activeConfig.labelKey,
+              styleOff: this.mentionConfig.disableStyle,
+              activeIndex: 0
+            },
+          },
+        ],
+      }),
+    );
+    this.overlayRef.attach(filePreviewPortal);
+    this.subscription = this.mentionService.click$.subscribe((value) => {
+      if (value) {
         nativeElement.focus();
         let fakeKeydown = { key: 'Enter', keyCode: KEY_ENTER, wasClick: true };
         this.keyHandler(fakeKeydown, nativeElement);
-      });
-    }
-    this.searchList.labelKey = this.activeConfig.labelKey;
-    this.searchList.dropUp = this.activeConfig.dropUp;
-    this.searchList.styleOff = this.mentionConfig.disableStyle;
-    this.searchList.activeIndex = 0;
-    this.searchList.position(nativeElement, this.iframe);
-    window.requestAnimationFrame(() => this.searchList.reset());
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
   }
 }
