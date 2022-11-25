@@ -1,5 +1,5 @@
 {
-  "name": "angular-mentions",
+  "name": "@luca-sharryland/angular-mentions",
   "version": "1.6.0-alpha",
   "description": "Angular mentions for text fields.",
   "keywords": [
