@@ -1,6 +1,6 @@
 {
   "name": "angular-mentions",
-  "version": "1.5.0",
+  "version": "1.6.0-alpha",
   "description": "Angular mentions for text fields.",
   "keywords": [
     "angular",
@@ -9,9 +9,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/dmacfarlane/angular-mentions.git"
+    "url": "https://github.com/luca-sharryland/angular-mentions.git"
   },
-  "author": "Dan MacFarlane",
+  "author": "Luca Peruzzo",
   "license": "MIT",
   "dependencies": {
     "tslib": "^2.0.0"
@@ -20,5 +20,8 @@
     "@angular/common": ">=7.2.0",
     "@angular/core": ">=7.2.0",
     "@angular/cdk": ">=14.2.0"
+  },
+  "publishConfig": {
+    "@luca-sharryland:registry": "https://npm.pkg.github.com"
   }
 }
