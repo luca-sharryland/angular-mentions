@@ -148,13 +148,14 @@ export class MentionDirective implements OnChanges, OnDestroy {
       }
     }
     config.items = items;
-
     // add the config
     this.triggerChars[config.triggerChar] = config;
 
     // for async update while menu/search is active
     if (this.activeConfig && this.activeConfig.triggerChar == config.triggerChar) {
       this.activeConfig = config;
+      this.overlayRef?.dispose();
+      this.showSearchList(this._element.nativeElement);
       this.updateSearchList();
     }
   }
