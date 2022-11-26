@@ -2,25 +2,34 @@
 
 Simple Angular mentions inspired by [Ment.io](https://github.com/jeff-collins/ment.io).
 
-[Click here for a Demo](http://dmacfarlane.github.io/angular-mentions/)
+This library is forked from [Angular Mentions](https://www.npmjs.com/package/angular-mentions), but it uses angular cdk overlay instead of simple absolute positioned overlay div. Cdk avoids all the overflow problems creating an overlay layer dynamically positioned.
+
+**Project is currently in Beta**
 
 This package provides auto-complete suggestions for @mentions in text input fields, text areas,
 and content editable fields.
 
-[Click here to experiment on StackBlitz](https://stackblitz.com/edit/angular-mentions)
+[Click here to experiment on StackBlitz](https://stackblitz.com/edit/luca-sharryland-angular-mentions)
 
 To install and start the demo application:
 
-    git clone https://github.com/dmacfarlane/angular-mentions.git
+    git clone https://github.com/luca-sharryland/angular-mentions.git
     cd angular-mentions
     npm install
+    npm run build
     ng serve
 
 ### Usage
 
 Add the package as a dependency to your project using:
 
-    npm install angular-mentions
+    npm install @angular/cdk @luca-sharryland/angular-mentions
+
+Add the following line in your global style file (for example styles.css):
+
+```scss
+@import '@angular/cdk/overlay-prebuilt.css';
+```
 
 Add the module to your app.module imports:
 
@@ -57,7 +66,6 @@ The following optional configuration items can be used.
 | labelKey      | label    | The field to be used as the item label (when the items are objects). |
 | disableSort   | false    | Disable sorting of suggested items. |
 | disableSearch | false    | Disable internal filtering (only useful if async search is used). |
-| dropUp        | false    | Show the menu above the cursor instead of below. |
 | maxItems      | ∞        | Limit the number of items shown in the text. The default is no limit. |
 | mentionSelect |          | A function to format the selected item before inserting the text. |
 | mentionFilter |          | A function that returns the items to display. |
@@ -85,9 +93,7 @@ The following output events can be used.
 ### Item Templates
 
 The appearance of the items displayed in the mention list menu can be customized using the 
-`[mentionListTemplate]` directive as shown in this example:
-
-https://stackblitz.com/edit/angular-mentions-avatar
+`[mentionListTemplate]` directive
 
 ### Alternative Usage
 

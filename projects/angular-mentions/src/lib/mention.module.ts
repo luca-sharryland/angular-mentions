@@ -1,9 +1,8 @@
+import { OverlayModule } from '@angular/cdk/overlay';
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
-import { MentionDirective } from './mention.directive';
 import { MentionListComponent } from './mention-list.component';
-import { MentionService } from './mention.service';
-import { OverlayModule } from '@angular/cdk/overlay';
+import { MentionDirective } from './mention.directive';
 
 @NgModule({
     declarations: [
@@ -17,8 +16,5 @@ import { OverlayModule } from '@angular/cdk/overlay';
     exports: [
         MentionDirective
     ],
-    providers: [
-        MentionService
-    ]
 })
 export class MentionModule { }
