@@ -5,7 +5,8 @@
   "keywords": [
     "angular",
     "mention",
-    "autocomplete"
+    "autocomplete",
+    "cdk"
   ],
   "repository": {
     "type": "git",
