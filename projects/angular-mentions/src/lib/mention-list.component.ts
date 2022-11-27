@@ -22,7 +22,7 @@ import { getContentEditableCaretCoords, isInputOrTextAreaElement, MENTIONS_DATA 
       <li *ngFor="let item of mentionService?.items; let i = index"
         [class.active]="activeIndex==i" [class.mention-list__mention-active]="!styleOff && activeIndex==i">
         <a [class.mention-list__mention-item]="!styleOff"
-          (mousedown)="onClick(i);$event.preventDefault()">
+          (click)="onClick(i);$event.preventDefault()">
           <ng-template [ngTemplateOutlet]="itemTemplate" [ngTemplateOutletContext]="{'item':item}"></ng-template>
         </a>
       </li>

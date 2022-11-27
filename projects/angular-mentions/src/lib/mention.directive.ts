@@ -31,7 +31,6 @@ const KEY_BUFFERED = 229;
   host: {
     '(keydown)': 'keyHandler($event)',
     '(input)': 'inputHandler($event)',
-    '(blur)': 'blurHandler($event)',
     'autocomplete': 'off'
   }
 })
@@ -40,6 +39,7 @@ export class MentionDirective implements OnChanges, OnDestroy {
   // stores the items passed to the mentions directive and used to populate the root items in mentionConfig
   private mentionItems: any[];
   private subscription: Subscription = new Subscription();
+  private overlaySubscription: Subscription = new Subscription();
 
   @Input('mention') set mention(items: any[]) {
     this.mentionItems = items;
@@ -173,11 +173,6 @@ export class MentionDirective implements OnChanges, OnDestroy {
     }
   }
 
-  blurHandler(event: any) {
-    this.stopEvent(event);
-    this.stopSearch();
-  }
-
   inputHandler(event: any, nativeElement: HTMLInputElement = this._element.nativeElement) {
     if (this.lastKeyCode === KEY_BUFFERED && event.data) {
       let keyCode = event.data.charCodeAt(0);
@@ -231,11 +226,8 @@ export class MentionDirective implements OnChanges, OnDestroy {
       }
     }
     else if (this.startPos >= 0 && this.searching) {
-      if (pos <= this.startPos) {
-        this.overlayRef?.dispose();
-      }
       // ignore shift when pressed alone, but not when used with another key
-      else if (event.keyCode !== KEY_SHIFT &&
+      if (event.keyCode !== KEY_SHIFT &&
         !event.metaKey &&
         !event.altKey &&
         !event.ctrlKey &&
@@ -368,6 +360,7 @@ export class MentionDirective implements OnChanges, OnDestroy {
   showSearchList(nativeElement: HTMLInputElement) {
     this.opened.emit();
     this.subscription.unsubscribe();
+    this.overlaySubscription.unsubscribe();
     let origin = {
       topLeft: { originX: 'start', originY: 'top' } as OriginConnectionPosition,
       topRight: { originX: 'end', originY: 'top' } as OriginConnectionPosition,
@@ -391,9 +384,10 @@ export class MentionDirective implements OnChanges, OnDestroy {
       .withViewportMargin(16)
       .withPositions([{ ...origin.bottomLeft, ...overlay.topLeft }, { ...origin.topLeft, ...overlay.bottomLeft }]);
     this.overlayRef = this.overlay.create({
-      hasBackdrop: false,
+      hasBackdrop: true,
       disposeOnNavigation: true,
       panelClass: 'autocomplete',
+      backdropClass: 'cdk-overlay-transparent-backdrop',
       positionStrategy,
       scrollStrategy: this.overlay.scrollStrategies.reposition({ autoClose: true, scrollThrottle: 1 }),
     });
@@ -416,6 +410,9 @@ export class MentionDirective implements OnChanges, OnDestroy {
       }),
     );
     this.overlayRef.attach(filePreviewPortal);
+    this.overlaySubscription = this.overlayRef.backdropClick().subscribe(() => {
+      this.overlayRef?.dispose()
+    })
     this.subscription = this.mentionService.click$.subscribe((value) => {
       if (value) {
         nativeElement.focus();
@@ -427,5 +424,6 @@ export class MentionDirective implements OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+    this.overlaySubscription.unsubscribe();
   }
 }
