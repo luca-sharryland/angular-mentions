@@ -359,6 +359,7 @@ export class MentionDirective implements OnChanges, OnDestroy {
 
   showSearchList(nativeElement: HTMLInputElement) {
     this.opened.emit();
+    this.mentionService.reset();
     this.subscription.unsubscribe();
     this.overlaySubscription.unsubscribe();
     let origin = {

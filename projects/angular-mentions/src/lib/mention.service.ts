@@ -18,6 +18,17 @@ export class MentionService implements OnDestroy {
     this.activateItem$ = this.activateItemSubject.asObservable();
   }
 
+  reset() {
+    this.clickSubject.complete();
+    this.activateItemSubject.complete();
+    this.clickSubject = new BehaviorSubject(false);
+    this.activateItemSubject = new BehaviorSubject(null);
+    this.click$ = this.clickSubject.asObservable();
+    this.activateItem$ = this.activateItemSubject.asObservable();
+    this._activeItem = null;
+    this._items = [];
+  }
+
   click() {
     this.clickSubject.next(true);
   }
