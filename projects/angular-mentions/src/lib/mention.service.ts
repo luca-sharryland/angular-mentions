@@ -6,6 +6,7 @@ export class MentionService implements OnDestroy {
 
   click$: Observable<boolean>;
   activateItem$: Observable<'next' | 'previous'>;
+  
   private clickSubject: BehaviorSubject<boolean>;
   private activateItemSubject: BehaviorSubject<'next' | 'previous'>;
   private _activeItem: any;

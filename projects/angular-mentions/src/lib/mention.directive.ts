@@ -119,7 +119,12 @@ export class MentionDirective implements OnChanges, OnDestroy {
     this.addConfig(config);
     // nested configs
     if (config.mentions) {
-      config.mentions.forEach(config => this.addConfig(config));
+      config.mentions.forEach(config => {
+        if (this.mentionItems) {
+          config.items = this.mentionItems;
+        }
+        this.addConfig(config);
+      });
     }
   }
 
