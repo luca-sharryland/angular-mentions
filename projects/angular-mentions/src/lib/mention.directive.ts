@@ -392,7 +392,7 @@ export class MentionDirective implements OnChanges, OnDestroy {
     this.overlayRef = this.overlay.create({
       hasBackdrop: true,
       disposeOnNavigation: true,
-      panelClass: 'autocomplete',
+      panelClass: 'angular-mentions-autocomplete',
       backdropClass: 'cdk-overlay-transparent-backdrop',
       positionStrategy,
       scrollStrategy: this.overlay.scrollStrategies.reposition({ autoClose: true, scrollThrottle: 1 }),
